@@ -1,32 +1,42 @@
+const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const prisma = require('../config/prisma');
+const { JWT_SECRET } = require('../middleware/auth');
 
-// Check if setup is already completed
+// Check if real organization initial setup is completed
 const getSetupStatus = async (req, res, next) => {
   try {
-    const org = await prisma.organization.findFirst({
-      where: { setupCompleted: true }
+    const realOrg = await prisma.organization.findFirst({
+      where: {
+        isDemo: false,
+        setupCompleted: true
+      }
     });
     res.json({
       success: true,
-      setupCompleted: Boolean(org),
-      organizationName: org ? org.name : null
+      setupCompleted: Boolean(realOrg),
+      organizationName: realOrg ? realOrg.name : null
     });
   } catch (error) {
     next(error);
   }
 };
 
-// Initial system setup: Organization + Admin creation (atomic transaction)
+// One-Time Initial Real Setup: Organization + Primary Admin creation (atomic transaction)
 const completeSetup = async (req, res, next) => {
   try {
-    const existingOrg = await prisma.organization.findFirst({
-      where: { setupCompleted: true }
+    // 1. Check if real organization setup is already completed
+    const existingRealOrg = await prisma.organization.findFirst({
+      where: {
+        isDemo: false,
+        setupCompleted: true
+      }
     });
-    if (existingOrg) {
+
+    if (existingRealOrg) {
       return res.status(400).json({
         success: false,
-        message: 'System setup has already been completed. This route is locked permanently.'
+        message: 'Organization setup is already completed. This route is locked permanently.'
       });
     }
 
@@ -48,7 +58,7 @@ const completeSetup = async (req, res, next) => {
     if (!companyName || !adminName || !adminEmail || !password) {
       return res.status(400).json({
         success: false,
-        message: 'Please provide all required company and admin fields.'
+        message: 'Please provide Organization Name, Admin Name, Admin Email, and Password.'
       });
     }
 
@@ -66,20 +76,35 @@ const completeSetup = async (req, res, next) => {
       });
     }
 
+    const normalizedEmail = adminEmail.toLowerCase().trim();
+
+    // Check if email is already registered across any organization
+    const existingUser = await prisma.user.findUnique({
+      where: { email: normalizedEmail }
+    });
+
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        message: 'A user with this email address already exists. Please use a unique email.'
+      });
+    }
+
     const hashedPassword = await bcrypt.hash(password, 10);
     const clientIp = req.ip || req.headers['x-forwarded-for'] || '127.0.0.1';
 
-    // Atomic transaction across Organization, Admin User, and Audit Log
+    // Atomic transaction across Real Organization, Primary Admin User, and Audit Log
     const result = await prisma.$transaction(async (tx) => {
       const organization = await tx.organization.create({
         data: {
-          name: companyName,
+          name: companyName.trim(),
           industry: industry || 'Technology',
-          email: businessEmail || null,
-          phone: companyPhone || null,
+          email: businessEmail || normalizedEmail,
+          phone: companyPhone || adminPhone || null,
           website: website || null,
           address: address || null,
           logo: logo || '',
+          isDemo: false,
           setupCompleted: true
         }
       });
@@ -87,8 +112,8 @@ const completeSetup = async (req, res, next) => {
       const adminUser = await tx.user.create({
         data: {
           organizationId: organization.id,
-          name: adminName,
-          email: adminEmail.toLowerCase().trim(),
+          name: adminName.trim(),
+          email: normalizedEmail,
           password: hashedPassword,
           phone: adminPhone || null,
           role: 'ADMIN',
@@ -104,7 +129,7 @@ const completeSetup = async (req, res, next) => {
           userName: adminUser.name,
           userRole: 'ADMIN',
           action: 'INITIAL_SYSTEM_SETUP',
-          details: `Organization "${organization.name}" and Admin account "${adminUser.email}" initialized.`,
+          details: `Real Organization "${organization.name}" and Primary Admin account "${adminUser.email}" initialized.`,
           ipAddress: typeof clientIp === 'string' ? clientIp : String(clientIp)
         }
       });
@@ -112,19 +137,35 @@ const completeSetup = async (req, res, next) => {
       return { organization, adminUser };
     });
 
+    // Auto-authenticate Admin on successful setup
+    const token = jwt.sign(
+      {
+        id: result.adminUser.id,
+        role: 'ADMIN',
+        organizationId: result.organization.id
+      },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
     res.status(201).json({
       success: true,
-      message: 'Initial organization and Admin setup completed successfully. Please sign in.',
+      message: 'Real Organization and Primary Admin created successfully.',
+      token,
       organization: {
         id: result.organization.id,
         _id: result.organization.id,
         name: result.organization.name
       },
-      admin: {
+      user: {
         id: result.adminUser.id,
         _id: result.adminUser.id,
+        name: result.adminUser.name,
         email: result.adminUser.email,
-        name: result.adminUser.name
+        phone: result.adminUser.phone,
+        role: 'ADMIN',
+        organizationId: result.organization.id,
+        organizationName: result.organization.name
       }
     });
   } catch (error) {

@@ -36,6 +36,17 @@ const protect = async (req, res, next) => {
       });
     }
 
+    // Invalidate sessions/tokens issued prior to password reset
+    if (user.passwordChangedAt && decoded.iat) {
+      const changedTimestamp = Math.floor(user.passwordChangedAt.getTime() / 1000);
+      if (decoded.iat < changedTimestamp) {
+        return res.status(401).json({
+          success: false,
+          message: 'Password was recently reset. Please log in again with your new credentials.'
+        });
+      }
+    }
+
     // Attach both id and _id for complete compatibility across controllers
     user._id = user.id;
     if (user.targetQuota && typeof user.targetQuota.toNumber === 'function') {

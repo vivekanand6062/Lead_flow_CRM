@@ -111,6 +111,13 @@ const createManager = async (req, res, next) => {
     const { name, email, password, phone, department, targetQuota } = req.body;
     const clientIp = req.ip || req.headers['x-forwarded-for'] || null;
 
+    if (req.body.role === 'ADMIN') {
+      return res.status(400).json({
+        success: false,
+        message: 'Creating additional Administrator accounts is forbidden. An organization may only have exactly one Admin.'
+      });
+    }
+
     if (!name || !email || !password) {
       return res.status(400).json({
         success: false,
@@ -338,14 +345,21 @@ const getSalesAgentById = async (req, res, next) => {
 
 const createSalesAgent = async (req, res, next) => {
   try {
-    if (req.user.role !== 'MANAGER') {
+    if (req.user.role !== 'MANAGER' && req.user.role !== 'ADMIN') {
       return res.status(403).json({
         success: false,
-        message: 'Only Managers are permitted to create Sales Agents.'
+        message: 'Only Managers and Administrators are permitted to create Sales Agents.'
       });
     }
 
-    const { name, email, password, phone, department, targetQuota } = req.body;
+    if (req.body.role === 'ADMIN') {
+      return res.status(400).json({
+        success: false,
+        message: 'Creating additional Administrator accounts is forbidden. An organization may only have exactly one Admin.'
+      });
+    }
+
+    const { name, email, password, phone, department, targetQuota, managerId } = req.body;
     const clientIp = req.ip || req.headers['x-forwarded-for'] || null;
 
     if (!name || !email || !password) {
@@ -367,11 +381,13 @@ const createSalesAgent = async (req, res, next) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    const assignedManagerId = req.user.role === 'MANAGER' ? req.user.id : (managerId || null);
+
     const [agent] = await prisma.$transaction([
       prisma.user.create({
         data: {
           organizationId: req.organizationId,
-          managerId: req.user.id,
+          managerId: assignedManagerId,
           name,
           email: email.toLowerCase().trim(),
           password: hashedPassword,

@@ -17,6 +17,7 @@ async function seed() {
       website: 'https://leadflow.io',
       address: 'Prestige Tech Park, Outer Ring Road, Bengaluru, Karnataka 560103',
       currency: 'INR',
+      isDemo: true,
       setupCompleted: true
     }
   });

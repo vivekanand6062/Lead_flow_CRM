@@ -22,7 +22,7 @@ router.put('/managers/:id', protect, authorize('ADMIN'), updateManager);
 // MANAGER (and Admin view-only): Sales Agent Management
 // Note: Only MANAGER can POST to create a Sales Agent!
 router.get('/sales-agents', protect, authorize('ADMIN', 'MANAGER'), getSalesAgents);
-router.post('/sales-agents', protect, authorize('MANAGER'), createSalesAgent);
+router.post('/sales-agents', protect, authorize('ADMIN', 'MANAGER'), createSalesAgent);
 router.get('/sales-agents/:id', protect, authorize('ADMIN', 'MANAGER'), getSalesAgentById);
 router.put('/sales-agents/:id', protect, authorize('MANAGER', 'ADMIN'), updateSalesAgent);
 

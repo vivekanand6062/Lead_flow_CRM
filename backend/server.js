@@ -41,6 +41,7 @@ app.get('/api/health', (req, res) => {
 // API Routes
 app.use('/api/setup', setupRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/auth', authRoutes); // Route alias for direct /auth requests
 app.use('/api/users', userRoutes);
 app.use('/api/leads', leadRoutes);
 app.use('/api/deals', dealRoutes);

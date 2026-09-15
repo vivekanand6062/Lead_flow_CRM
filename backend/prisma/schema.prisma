@@ -99,6 +99,7 @@ model Organization {
   address        String?
   logo           String   @default("")
   currency       String   @default("INR")
+  isDemo         Boolean  @default(false)
   setupCompleted Boolean  @default(false)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
@@ -112,6 +113,7 @@ model Organization {
   followUps  FollowUp[]
   auditLogs  AuditLog[]
 
+  @@index([isDemo, setupCompleted])
   @@map("organizations")
 }
 
@@ -128,6 +130,7 @@ model User {
   targetQuota    Decimal    @default(0) @db.Decimal(15, 2)
   status         UserStatus @default(ACTIVE)
   avatar         String     @default("")
+  passwordChangedAt DateTime?
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt
 
@@ -143,11 +146,26 @@ model User {
   activities       Activity[]
   followUps        FollowUp[]
   auditLogs        AuditLog[]
+  passwordResetTokens PasswordResetToken[]
 
   @@index([organizationId])
   @@index([managerId])
   @@index([role])
   @@map("users")
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("password_reset_tokens")
 }
 
 model Company {
