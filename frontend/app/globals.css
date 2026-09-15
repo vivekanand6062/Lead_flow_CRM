@@ -1,0 +1,189 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Midnight Plum × Copper - Light Mode */
+    --background: #F7F3F0;
+    --background-alt: #F1EBE7;
+    --surface: #FFFDFC;
+    --surface-elevated: #FFFFFF;
+    --surface-hover: #F8F2EE;
+    --surface-selected: #F4EAE3;
+    --border: #E5DCD5;
+    --border-strong: #D5C8BE;
+    --border-subtle: #EDE4DE;
+
+    --text-primary: #211A20;
+    --text-secondary: #665C65;
+    --text-muted: #8A7F87;
+
+    --primary: #A9683F;
+    --primary-hover: #8F5734;
+    --primary-active: #79472B;
+    --primary-bright: #C08457;
+    --primary-soft: #F3E3D7;
+    --primary-highlight: #C08457;
+
+    --plum: #704766;
+    --plum-bright: #85577D;
+    --plum-soft: #F0E5EE;
+
+    --ai: #705BC9;
+    --ai-bright: #846FDC;
+    --ai-soft: #EEEAFB;
+
+    --warm-cream: #FFF8F1;
+    --gold: #A8793D;
+
+    --success: #3FA77A;
+    --success-soft: rgba(63, 167, 122, 0.12);
+    --warning: #D29A4A;
+    --warning-soft: rgba(210, 154, 74, 0.12);
+    --danger: #D76565;
+    --danger-soft: rgba(215, 101, 101, 0.12);
+    --info: #7E9FD6;
+    --info-soft: rgba(126, 159, 214, 0.12);
+
+    /* Legacy compatibility */
+    --bg-primary: #FFFDFC;
+    --bg-secondary: #F7F3F0;
+    --bg-tertiary: #F1EBE7;
+    --border-color: #E5DCD5;
+  }
+
+  .dark {
+    /* Midnight Plum × Copper - Dark Mode */
+    --background: #0C0A0F;
+    --background-alt: #100C13;
+    --surface: #141117;
+    --surface-elevated: #1A151D;
+    --surface-hover: #211B24;
+    --surface-selected: #261D28;
+    --border: #2A242D;
+    --border-strong: #3A303D;
+    --border-subtle: #1F1922;
+
+    --text-primary: #F5F1F3;
+    --text-secondary: #B8AEB9;
+    --text-muted: #817783;
+
+    --primary: #C08457;
+    --primary-hover: #D39A6B;
+    --primary-active: #A96F46;
+    --primary-bright: #E0A978;
+    --primary-soft: rgba(192, 132, 87, 0.12);
+    --primary-highlight: #E0A978;
+
+    --plum: #6E456B;
+    --plum-bright: #8B5C86;
+    --plum-soft: rgba(110, 69, 107, 0.16);
+
+    --ai: #9B8AFB;
+    --ai-bright: #B7AAFF;
+    --ai-soft: rgba(155, 138, 251, 0.12);
+
+    --warm-cream: #F2E6D8;
+    --gold: #D6A86C;
+
+    --success: #3FA77A;
+    --success-soft: rgba(63, 167, 122, 0.15);
+    --warning: #D29A4A;
+    --warning-soft: rgba(210, 154, 74, 0.15);
+    --danger: #D76565;
+    --danger-soft: rgba(215, 101, 101, 0.15);
+    --info: #7E9FD6;
+    --info-soft: rgba(126, 159, 214, 0.15);
+
+    /* Legacy compatibility */
+    --bg-primary: #0C0A0F;
+    --bg-secondary: #141117;
+    --bg-tertiary: #1A151D;
+    --border-color: #2A242D;
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--text-primary);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* Tabular figures for financial and numerical metrics */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Emil Kowalski custom motion timing utilities */
+.transition-tactile {
+  transition-property: transform, opacity, background-color, border-color, box-shadow;
+  transition-timing-function: cubic-bezier(0.23, 1, 0.32, 1);
+  transition-duration: 160ms;
+}
+
+/* Editorial subtle horizontal rule */
+.editorial-rule {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border), transparent);
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(192, 132, 87, 0.2);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(192, 132, 87, 0.4);
+}
+
+/* Hardware-accelerated Scroll Reveal System */
+.scroll-reveal {
+  opacity: 0;
+  transform: translateY(22px);
+  transition: opacity 0.7s cubic-bezier(0.23, 1, 0.32, 1), transform 0.7s cubic-bezier(0.23, 1, 0.32, 1);
+  will-change: opacity, transform;
+}
+
+.scroll-reveal.is-revealed {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Stagger delay classes for scroll-reveal groups */
+.delay-75 { transition-delay: 75ms; }
+.delay-150 { transition-delay: 150ms; }
+.delay-225 { transition-delay: 225ms; }
+.delay-300 { transition-delay: 300ms; }
+.delay-375 { transition-delay: 375ms; }
+.delay-450 { transition-delay: 450ms; }
+
+/* Accessibility: Gated Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .scroll-reveal {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+  .animate-float-slow,
+  .animate-float-delayed,
+  .animate-float-reverse,
+  .animate-pulse-glow,
+  .animate-shimmer-sweep,
+  .animate-scan-line,
+  .animate-spin-slow,
+  .animate-fade-in-up {
+    animation: none !important;
+    transform: none !important;
+  }
+}
+

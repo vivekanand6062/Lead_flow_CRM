@@ -1,0 +1,354 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  ADMIN
+  MANAGER
+  SALES_AGENT
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  PROPOSAL
+  NEGOTIATION
+  WON
+  LOST
+}
+
+enum IntentLevel {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum DealStage {
+  QUALIFIED
+  PROPOSAL
+  NEGOTIATION
+  WON
+  LOST
+}
+
+enum DealStatus {
+  OPEN
+  WON
+  LOST
+}
+
+enum RiskHealth {
+  GOOD
+  MODERATE
+  AT_RISK
+}
+
+enum ActivityType {
+  CALL
+  EMAIL
+  MEETING
+  TASK
+  NOTE
+  FOLLOW_UP
+}
+
+enum ActivityStatus {
+  COMPLETED
+  PENDING
+  CANCELLED
+}
+
+enum FollowUpType {
+  CALL
+  EMAIL
+  MEETING
+  TASK
+}
+
+enum FollowUpPriority {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum FollowUpStatus {
+  TODAY
+  UPCOMING
+  OVERDUE
+  COMPLETED
+}
+
+model Organization {
+  id             String   @id @default(cuid())
+  name           String
+  industry       String   @default("Technology")
+  email          String?
+  phone          String?
+  website        String?
+  address        String?
+  logo           String   @default("")
+  currency       String   @default("INR")
+  setupCompleted Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  users      User[]
+  companies  Company[]
+  contacts   Contact[]
+  leads      Lead[]
+  deals      Deal[]
+  activities Activity[]
+  followUps  FollowUp[]
+  auditLogs  AuditLog[]
+
+  @@map("organizations")
+}
+
+model User {
+  id             String     @id @default(cuid())
+  organizationId String
+  name           String
+  email          String     @unique
+  password       String
+  phone          String?
+  role           Role
+  managerId      String?
+  department     String     @default("Sales")
+  targetQuota    Decimal    @default(0) @db.Decimal(15, 2)
+  status         UserStatus @default(ACTIVE)
+  avatar         String     @default("")
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  manager        User?        @relation("UserManager", fields: [managerId], references: [id], onDelete: SetNull)
+  directReports  User[]       @relation("UserManager")
+
+  assignedContacts Contact[]   @relation("AgentContacts")
+  assignedLeads    Lead[]      @relation("AgentLeads")
+  managedLeads     Lead[]      @relation("ManagerLeads")
+  assignedDeals    Deal[]      @relation("AgentDeals")
+  managedDeals     Deal[]      @relation("ManagerDeals")
+  activities       Activity[]
+  followUps        FollowUp[]
+  auditLogs        AuditLog[]
+
+  @@index([organizationId])
+  @@index([managerId])
+  @@index([role])
+  @@map("users")
+}
+
+model Company {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  industry       String   @default("Technology")
+  website        String?
+  phone          String?
+  address        String?
+  employeeCount  Int      @default(50)
+  annualRevenue  Decimal  @default(0) @db.Decimal(15, 2)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  contacts     Contact[]
+  deals        Deal[]
+
+  @@index([organizationId])
+  @@index([organizationId, name])
+  @@map("companies")
+}
+
+model Contact {
+  id              String   @id @default(cuid())
+  organizationId  String
+  companyId       String?
+  assignedAgentId String?
+  name            String
+  email           String?
+  phone           String?
+  designation     String   @default("Decision Maker")
+  companyName     String   @default("")
+  notes           String   @default("")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  organization  Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  company       Company?     @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  assignedAgent User?        @relation("AgentContacts", fields: [assignedAgentId], references: [id], onDelete: SetNull)
+  deals         Deal[]
+  activities    Activity[]
+
+  @@index([organizationId])
+  @@index([companyId])
+  @@index([assignedAgentId])
+  @@map("contacts")
+}
+
+model Lead {
+  id               String      @id @default(cuid())
+  organizationId   String
+  assignedAgentId  String?
+  managerId        String?
+  name             String
+  companyName      String
+  email            String?
+  phone            String?
+  status           LeadStatus  @default(NEW)
+  leadSource       String      @default("Website")
+  leadScore        Int         @default(65)
+  intentLevel      IntentLevel @default(MEDIUM)
+  scoreReasoning   String      @default("Active engagement on product pages with verified business email.")
+  scoreSignals     String[]    @default([])
+  estimatedValue   Decimal     @default(0) @db.Decimal(15, 2)
+  notes            String      @default("")
+  lastActivityDate DateTime    @default(now())
+  nextFollowUpDate DateTime?
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  organization  Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  assignedAgent User?        @relation("AgentLeads", fields: [assignedAgentId], references: [id], onDelete: SetNull)
+  manager       User?        @relation("ManagerLeads", fields: [managerId], references: [id], onDelete: SetNull)
+  deals         Deal[]
+  activities    Activity[]
+  followUps     FollowUp[]
+
+  @@index([organizationId])
+  @@index([assignedAgentId])
+  @@index([managerId])
+  @@index([status])
+  @@map("leads")
+}
+
+model Deal {
+  id                String     @id @default(cuid())
+  organizationId    String
+  assignedAgentId   String?
+  managerId         String?
+  leadId            String?
+  companyId         String?
+  contactId         String?
+  title             String
+  companyName       String
+  value             Decimal    @default(0) @db.Decimal(15, 2)
+  currency          String     @default("INR")
+  probability       Int        @default(50)
+  stage             DealStage  @default(QUALIFIED)
+  status            DealStatus @default(OPEN)
+  expectedCloseDate DateTime
+  riskHealth        RiskHealth @default(GOOD)
+  riskSignals       String[]   @default([])
+  positiveSignals   String[]   @default([])
+  recommendedAction String     @default("Maintain regular cadence and confirm budget with executive sponsor.")
+  notes             String     @default("")
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+
+  organization  Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  assignedAgent User?        @relation("AgentDeals", fields: [assignedAgentId], references: [id], onDelete: SetNull)
+  manager       User?        @relation("ManagerDeals", fields: [managerId], references: [id], onDelete: SetNull)
+  lead          Lead?        @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  company       Company?     @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  contact       Contact?     @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  activities    Activity[]
+  followUps     FollowUp[]
+
+  @@index([organizationId])
+  @@index([assignedAgentId])
+  @@index([managerId])
+  @@index([stage])
+  @@index([status])
+  @@map("deals")
+}
+
+model Activity {
+  id              String         @id @default(cuid())
+  organizationId  String
+  userId          String?
+  leadId          String?
+  dealId          String?
+  contactId       String?
+  type            ActivityType
+  title           String
+  relatedCustomer String         @default("")
+  status          ActivityStatus @default(COMPLETED)
+  date            DateTime       @default(now())
+  notes           String         @default("")
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  lead         Lead?        @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  deal         Deal?        @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  contact      Contact?     @relation(fields: [contactId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([userId])
+  @@index([leadId])
+  @@index([dealId])
+  @@index([date])
+  @@map("activities")
+}
+
+model FollowUp {
+  id             String           @id @default(cuid())
+  organizationId String
+  userId         String
+  leadId         String?
+  dealId         String?
+  contactName    String
+  title          String
+  type           FollowUpType     @default(CALL)
+  dueDate        DateTime
+  time           String           @default("11:00 AM")
+  priority       FollowUpPriority @default(MEDIUM)
+  status         FollowUpStatus   @default(TODAY)
+  notes          String           @default("")
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lead         Lead?        @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  deal         Deal?        @relation(fields: [dealId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([userId])
+  @@index([dueDate])
+  @@index([status])
+  @@map("follow_ups")
+}
+
+model AuditLog {
+  id             String   @id @default(cuid())
+  organizationId String
+  userId         String?
+  userName       String   @default("System")
+  userRole       String   @default("SYSTEM")
+  action         String
+  details        String   @default("")
+  ipAddress      String?
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}

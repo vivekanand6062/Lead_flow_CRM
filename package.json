@@ -1,0 +1,16 @@
+{
+  "name": "leadflow",
+  "version": "1.0.0",
+  "private": true,
+  "description": "LeadFlow - Production-Style Full-Stack B2B CRM SaaS",
+  "scripts": {
+    "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
+    "seed": "cd backend && npm run seed",
+    "backend": "cd backend && node server.js",
+    "frontend": "cd frontend && npm run dev",
+    "dev": "concurrently \"npm run backend\" \"npm run frontend\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
